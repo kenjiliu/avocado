@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全台酪梨(G3)行情</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; margin: 0; background-color: #f0f2f0; color: #333; }
+        .container { padding: 15px; max-width: 800px; margin: auto; }
+        .header-box { background: #2e7d32; color: white; padding: 20px 15px; border-radius: 0 0 20px 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .date-info { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 15px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th { background: #f1f8e9; color: #2e7d32; font-size: 12px; padding: 12px 5px; border-bottom: 2px solid #ddd; }
+        td { border-bottom: 1px solid #eee; padding: 12px 5px; text-align: center; font-size: 14px; }
+        
+        .market-info { text-align: left; padding-left: 10px; }
+        .market-name { font-weight: bold; color: #1b5e20; display: block; }
+        .crop-info { font-size: 11px; color: #777; }
+        
+        .price-avg { font-weight: bold; color: #e64a19; font-size: 16px; }
+        .vol-info { font-size: 12px; color: #666; }
+        
+        .no-data { text-align: center; padding: 60px 20px; color: #999; }
+        .loading { text-align: center; padding: 40px; color: #2e7d32; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header-box">
+    <div style="font-size: 20px; font-weight: bold;">全台酪梨行情 (G3)</div>
+    <div id="date-label" class="date-info">正在取得資料...</div>
+</div>
+
+<div class="container">
+    <div class="card" id="main-content">
+        <div class="loading">正在搜尋全台市場數據...</div>
+    </div>
+</div>
+
+<script>
+    // 取得民國日期格式 (如 115.01.30)
+    function getTodayROC() {
+        const d = new Date();
+        const y = d.getFullYear() - 1911;
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}.${m}.${day}`;
+    }
+
+    const todayStr = getTodayROC();
+    document.getElementById('date-label').innerText = `交易日期：${todayStr}`;
+
+    async function fetchAllMarkets() {
+        // 使用代碼 G3 進行過濾
+        const API_URL = 'https://data.moa.gov.tw/api/v1/AgriProductsTransType/?Crop=%E9%85%AA%E6%A2%A8';
+
+        try {
+            const response = await fetch(API_URL);
+            const json = await response.json();
+            
+            // 篩選：1.今日日期  2.代碼精確匹配 G3
+            const allMarkets = (json.Data || []).filter(item => 
+                item.TransDate === todayStr && 
+                item.CropCode.toUpperCase().trim() === "G3"
+            );
+
+            // 依平均價排序 (高到低)，方便觀察行情
+            allMarkets.sort((a, b) => b.Avg_Price - a.Avg_Price);
+
+            if (allMarkets.length === 0) {
+                document.getElementById('main-content').innerHTML = `
+                    <div class="no-data">
+                        <strong>本日（${todayStr}）全台市場暫無 G3 酪梨行情資料</strong><br><br>
+                        可能原因：市場休市或資料尚未匯入。
+                    </div>`;
+                return;
+            }
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th style="text-align:left; padding-left:10px;">市場/產品</th>
+                        <th>上</th>
+                        <th>中</th>
+                        <th>下</th>
+                        <th>平均</th>
+                        <th>量</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            allMarkets.forEach(item => {
+                html += `
+                <tr>
+                    <td class="market-info">
+                        <span class="market-name">${item.MarketName}</span>
+                        <span class="crop-info">${item.CropCode} ${item.CropName}</span>
+                    </td>
+                    <td>${Math.round(item.Upper_Price)}</td>
+                    <td>${Math.round(item.Middle_Price)}</td>
+                    <td>${Math.round(item.Lower_Price)}</td>
+                    <td class="price-avg">${item.Avg_Price}</td>
+                    <td class="vol-info">${Math.round(item.Trans_Quantity)}<br>kg</td>
+                </tr>`;
+            });
+
+            html += `</tbody></table>`;
+            document.getElementById('main-content').innerHTML = html;
+
+        } catch (e) {
+            document.getElementById('main-content').innerHTML = '<div class="no-data">無法連線 API，請檢查網路。</div>';
+        }
+    }
+
+    fetchAllMarkets();
+</script>
+
+</body>
+</html>
