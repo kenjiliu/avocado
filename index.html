@@ -55,7 +55,7 @@
 
     async function fetchAllMarkets() {
         // 使用代碼 G3 進行過濾
-        const API_URL = 'https://data.moa.gov.tw/api/v1/AgriProductsTransType/?Crop=%E9%85%AA%E6%A2%A8';
+        const API_URL = 'https://data.moa.gov.tw/api/v1/AgriProductsTransType/?CropCode=G3';
 
         try {
             const response = await fetch(API_URL);
