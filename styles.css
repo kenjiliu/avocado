@@ -1,0 +1,150 @@
+/* === 全域自訂樣式 (草綠色系變數) === */
+:root {
+    --primary-color: #3b7a57;       /* 質感草綠色 */
+    --primary-light: #e8f5e9;       /* 淺草綠 */
+    --border-color: #e0e6e2;        /* 輕薄的綠灰邊框 */
+    --text-dark: #2c3e35;           /* 深墨綠黑文字 */
+    --text-muted: #708076;          /* 帶綠調的灰色次要文字 */
+    --row-hover: #f1f7f3;           /* 滑鼠懸停的淡綠色 */
+    --bg-color: #fafdfb;            /* 修正：補上柔和的背景色 */
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-dark);
+    margin: 0;
+    padding: 30px 15px;
+    display: flex;
+    justify-content: center;
+}
+
+/* === 容器卡片 === */
+.container {
+    max-width: 850px;
+    width: 100%;
+    background: #ffffff;
+    padding: 32px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(59, 122, 87, 0.06);
+    border: 1px solid var(--border-color);
+}
+
+.header-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+h5 {
+    font-size: 1.4rem;
+    margin: 0;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+h5::before {
+    content: "🥑";
+}
+
+.sort-tip {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.hidden { display: none; }
+
+/* === 響應式表格與可點擊表頭 === */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+}
+
+th {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* 可點擊排序的表頭樣式 */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.2s;
+}
+
+th.sortable:hover {
+    background-color: #2e5f43; /* 滑鼠移上去稍微變深綠 */
+}
+
+/* 排序箭頭符號細節 */
+th.sortable::after {
+    content: " ↕";
+    font-size: 0.8rem;
+    opacity: 0.5;
+    margin-left: 5px;
+}
+th.sortable.asc::after {
+    content: " ▲";
+    opacity: 1;
+    color: #fffbdf; /* 啟動排序時箭頭微發亮 */
+}
+th.sortable.desc::after {
+    content: " ▼";
+    opacity: 1;
+    color: #fffbdf;
+}
+
+/* 調整對齊：文字靠左，數字價格靠右 */
+th:first-child, td:first-child { text-align: left; }
+th:not(:first-child), td:not(:first-child) { text-align: right; }
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+tbody tr:hover {
+    background-color: var(--row-hover);
+}
+
+/* 狀態與輔助樣式 */
+.text-center { text-align: center !important; }
+.text-muted { color: var(--text-muted); font-style: italic; }
+.text-danger { color: #c62828; font-weight: bold; }
+
+
+.footer-link {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-top: 20px;
+    text-align: right;
+}
+.footer-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+.footer-link a:hover {
+    text-decoration: underline;
+}
