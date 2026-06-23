@@ -1,121 +1,348 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>今日酪梨行情</title>
-    <link rel="icon" href="./favicon.png" />
-    <style>
-        body { font-family: -apple-system, sans-serif; margin: 0; background-color: #f0f2f0; color: #333; }
-        .container { padding: 15px; max-width: 800px; margin: auto; }
-        .header-box { background: #2e7d32; color: white; padding: 20px 15px; border-radius: 0 0 20px 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .date-info { font-size: 14px; opacity: 0.9; margin-top: 5px; }
-        
-        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 15px; overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th { background: #f1f8e9; color: #2e7d32; font-size: 12px; padding: 12px 5px; border-bottom: 2px solid #ddd; }
-        td { border-bottom: 1px solid #eee; padding: 12px 5px; text-align: center; font-size: 14px; }
-        
-        .market-info { text-align: left; padding-left: 10px; }
-        .market-name { font-weight: bold; color: #1b5e20; display: block; }
-        .crop-info { font-size: 11px; color: #777; }
-        
-        .price-avg { font-weight: bold; color: #e64a19; font-size: 16px; }
-        .vol-info { font-size: 12px; color: #666; }
-        
-        .no-data { text-align: center; padding: 60px 20px; color: #999; }
-        .loading { text-align: center; padding: 40px; color: #2e7d32; font-weight: bold; }
-    </style>
+  <title>酪梨市場價格看板</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="./favicon.png" />  
+  <style>
+    /* === 全域自訂樣式 (草綠色系變數) === */
+    :root {
+      --primary-color: #3b7a57;       /* 質感草綠色 */
+      --primary-light: #e8f5e9;       /* 淺草綠 */
+      --border-color: #e0e6e2;        /* 輕薄的綠灰邊框 */
+      --text-dark: #2c3e35;           /* 深墨綠黑文字 */
+      --text-muted: #708076;          /* 帶綠調的灰色次要文字 */
+      --row-hover: #f1f7f3;           /* 滑鼠懸停的淡綠色 */
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-dark);
+      margin: 0;
+      padding: 30px 15px;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* === 容器卡片 === */
+    .container {
+      max-width: 850px;
+      width: 100%;
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(59, 122, 87, 0.06);
+      border: 1px solid var(--border-color);
+    }
+
+    .header-area {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    h5 {
+      font-size: 1.4rem;
+      margin: 0;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h5::before {
+      content: "🥑";
+    }
+
+    .sort-tip {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .hidden { display: none; }
+    
+    /* === 響應式表格與可點擊表頭 === */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95rem;
+    }
+
+    th {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* 可點擊排序的表頭樣式 */
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      transition: background-color 0.2s;
+    }
+
+    th.sortable:hover {
+      background-color: #2e5f43; /* 滑鼠移上去稍微變深綠 */
+    }
+
+    /* 排序箭頭符號細節 */
+    th.sortable::after {
+      content: " ↕";
+      font-size: 0.8rem;
+      opacity: 0.5;
+      margin-left: 5px;
+    }
+    th.sortable.asc::after {
+      content: " ▲";
+      opacity: 1;
+      color: #fffbdf; /* 啟動排序時箭頭微發亮 */
+    }
+    th.sortable.desc::after {
+      content: " ▼";
+      opacity: 1;
+      color: #fffbdf;
+    }
+
+    /* 調整對齊：文字靠左，數字價格靠右 */
+    th:first-child, td:first-child { text-align: left; }
+    th:not(:first-child), td:not(:first-child) { text-align: right; }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: var(--row-hover);
+    }
+
+    /* 狀態與輔助樣式 */
+    .text-center { text-align: center !important; }
+    .text-muted { color: var(--text-muted); font-style: italic; }
+    .text-danger { color: #c62828; font-weight: bold; }
+
+
+    .footer-link {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 20px;
+      text-align: right;
+    }
+    .footer-link a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .footer-link a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
 
-<div class="header-box">
-    <div style="font-size: 20px; font-weight: bold;">今日酪梨行情</div>
-    <div id="date-label" class="date-info">正在取得資料...</div>
-</div>
-
 <div class="container">
-    <div class="card" id="main-content">
-        <div class="loading">正在搜尋全台市場數據...</div>
-    </div>
+  <div class="header-area">
+    <h5 id="title">今日酪梨市場價格（載入中...）：</h5>
+    <span class="sort-tip hidden">提示：點擊任一欄位名稱皆可切換排序</span>
+  </div>
+  
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" id="th-market" onclick="toggleSort('market')">市場別</th>
+          <th class="sortable" id="th-high" onclick="toggleSort('high')">上價 (元)</th>
+          <th class="sortable" id="th-mid" onclick="toggleSort('mid')">中價 (元)</th>
+          <th class="sortable" id="th-low" onclick="toggleSort('low')">下價 (元)</th>
+          <th class="sortable" id="th-price" onclick="toggleSort('price')">平均價 (元)</th>
+          <th class="sortable" id="th-volume" onclick="toggleSort('volume')">交易量 (公斤)</th>
+        </tr>
+      </thead>
+      <tbody id="price-table-body">
+        <tr>
+          <td colspan="6" class="text-center text-muted">正在為您採集最新鮮的市場行情...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <p class="footer-link">更多資料請至：<a href="https://amis.afa.gov.tw/main/Main.aspx" target="_blank">農產品批發市場交易行情站 ↗</a></p>
 </div>
 
 <script>
-    // 取得民國日期格式 (如 115.01.30)
-    function getTodayROC() {
-        const d = new Date();
-        const y = d.getFullYear() - 1911;
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}.${m}.${day}`;
+// === 設定與定義 ===
+const CROP_CODE = 'G3';
+const MARKETS = ['台北一', '台北二', '三重區', '板橋區', '桃農', '豐原區', '台中市', '高雄市', '鳳山區'];
+const COLUMNS = ['市場名稱', '上價', '中價', '下價', '平均價', '交易量'];
+const API_URL = 'https://data.moa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx';
+
+let cachedRawData = []; 
+
+// 紀錄目前的排序欄位與狀態: 'none' (預設), 'asc' (低到高), 'desc' (高到低)
+let currentSort = {
+    column: 'market', 
+    state: 'none'
+};
+
+function getMinguoDate(daysOffset = 0) {
+    const date = new Date();
+    date.setDate(date.getDate() + daysOffset);
+    const minguoYear = date.getFullYear() - 1911;
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${minguoYear}.${month}.${day}`;
+}
+
+const TODAY = getMinguoDate(0);
+
+async function fetchFarmData(cropCode, market, date) {
+    const params = new URLSearchParams({ 'CropCode': cropCode, 'Market': market, 'StartDate': date, 'EndDate': date });
+    try {
+        const response = await fetch(`${API_URL}?${params.toString()}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`讀取市場 [${market}] 資料失敗:`, error);
+        return null;
+    }
+}
+
+/**
+ * 處理排序狀態切換並重繪表格
+ */
+function toggleSort(type) {
+    if (currentSort.column === type) {
+        if (currentSort.state === 'none') currentSort.state = 'desc';
+        else if (currentSort.state === 'desc') currentSort.state = 'asc';
+        else currentSort.state = 'none';
+    } else {
+        currentSort.column = type;
+        currentSort.state = 'desc';
     }
 
-    const todayStr = getTodayROC();
-    document.getElementById('date-label').innerText = `交易日期：${todayStr}`;
+    // 更新表頭 UI 箭頭樣式
+    document.querySelectorAll('th.sortable').forEach(th => {
+        th.classList.remove('asc', 'desc');
+    });
+    
+    if (currentSort.state !== 'none') {
+        const activeTh = document.getElementById(`th-${type}`);
+        if (activeTh) activeTh.classList.add(currentSort.state);
+    }
 
-    async function fetchAllMarkets() {
-        // 使用代碼 G3 進行過濾
-        const API_URL = 'https://data.moa.gov.tw/api/v1/AgriProductsTransType/?CropCode=G3';
+    renderTable();
+}
 
-        try {
-            const response = await fetch(API_URL);
-            const json = await response.json();
-            
-            // 篩選：1.今日日期  2.代碼精確匹配 G3
-            const allMarkets = (json.Data || []).filter(item => 
-                item.TransDate === todayStr && 
-                item.CropCode.toUpperCase().trim() === "G3"
-            );
+function renderTable() {
+    const tableBody = document.getElementById('price-table-body');
+    let displayItems = [...cachedRawData];
 
-            // 依平均價排序 (高到低)，方便觀察行情
-            allMarkets.sort((a, b) => b.Avg_Price - a.Avg_Price);
+    // 執行資料排序
+    displayItems.sort((a, b) => {
+        // 不管怎麼排，休市永遠在最下層
+        if (a.isRest) return 1;
+        if (b.isRest) return -1;
+        
+        if (currentSort.state === 'none') {
+            return a.originalIndex - b.originalIndex;
+        }
 
-            if (allMarkets.length === 0) {
-                document.getElementById('main-content').innerHTML = `
-                    <div class="no-data">
-                        <strong>本日（${todayStr}）全台市場暫無 G3 酪梨行情資料</strong><br><br>
-                        可能原因：市場休市或資料尚未匯入。
-                    </div>`;
-                return;
-            }
+        let valA, valB;
+        // 對應各欄位的 API Key 進行數值轉換
+        switch(currentSort.column) {
+            case 'market':
+                valA = a.originalIndex;
+                valB = b.originalIndex;
+                break;
+            case 'high':
+                valA = Number(a['上價']);
+                valB = Number(b['上價']);
+                break;
+            case 'mid':
+                valA = Number(a['中價']);
+                valB = Number(b['中價']);
+                break;
+            case 'low':
+                valA = Number(a['下價']);
+                valB = Number(b['下價']);
+                break;
+            case 'price':
+                valA = Number(a['平均價']);
+                valB = Number(b['平均價']);
+                break;
+            case 'volume':
+                valA = Number(a['交易量']);
+                valB = Number(b['交易量']);
+                break;
+            default:
+                return 0;
+        }
 
-            let html = `<table>
-                <thead>
-                    <tr>
-                        <th style="text-align:left; padding-left:10px;">市場/產品</th>
-                        <th>上</th>
-                        <th>中</th>
-                        <th>下</th>
-                        <th>平均</th>
-                        <th>量</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+        return currentSort.state === 'desc' ? valB - valA : valA - valB;
+    });
 
-            allMarkets.forEach(item => {
-                html += `
-                <tr>
-                    <td class="market-info">
-                        <span class="market-name">${item.MarketName}</span>
-                        <span class="crop-info">${item.CropCode} ${item.CropName}</span>
-                    </td>
-                    <td>${Math.round(item.Upper_Price)}</td>
-                    <td>${Math.round(item.Middle_Price)}</td>
-                    <td>${Math.round(item.Lower_Price)}</td>
-                    <td class="price-avg">${item.Avg_Price}</td>
-                    <td class="vol-info">${Math.round(item.Trans_Quantity)}<br>kg</td>
-                </tr>`;
+    // 輸出 HTML
+    let htmlRows = "";
+    displayItems.forEach(item => {
+        htmlRows += "<tr>";
+        if (item.isRest) {
+            htmlRows += `<td>${item['市場名稱']}</td><td colspan="5" class="text-center text-muted">[本日休市 / 尚無資料]</td>`;
+        } else {
+            COLUMNS.forEach(col => {
+                let value = item[col] !== undefined ? item[col] : '';
+                if (col === '交易量' && !isNaN(value) && value !== '') {
+                    value = Number(value).toLocaleString();
+                }
+                htmlRows += `<td>${value}</td>`;
             });
+        }
+        htmlRows += "</tr>";
+    });
 
-            html += `</tbody></table>`;
-            document.getElementById('main-content').innerHTML = html;
+    tableBody.innerHTML = htmlRows || `<tr><td colspan="6" class="text-center text-danger">全部市場皆查無資料。</td></tr>`;
+}
 
-        } catch (e) {
-            document.getElementById('main-content').innerHTML = '<div class="no-data">無法連線 API，請檢查網路。</div>';
+async function initDashboard() {
+    document.getElementById('title').innerText = `今日酪梨市場價格（${TODAY}）：`;
+    cachedRawData = [];
+
+    for (let i = 0; i < MARKETS.length; i++) {
+        const market = MARKETS[i];
+        const data = await fetchFarmData(CROP_CODE, market, TODAY);
+
+        if (data && data.length > 0) {
+            data.forEach(item => {
+                item.originalIndex = i; 
+                cachedRawData.push(item);
+            });
+        } else {
+            cachedRawData.push({ '市場名稱': market, 'isRest': true, 'originalIndex': i });
         }
     }
 
-    fetchAllMarkets();
+    renderTable();
+}
+
+document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
 
 </body>
