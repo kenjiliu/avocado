@@ -133,27 +133,42 @@ function renderTable() {
 }
 
 /**
- * 初始化看板：純粹鎖定今日
+ * 初始化看板：純粹鎖定今日，並加上無效數據與 0 值過濾
  */
 async function initDashboard() {
     document.getElementById('title').innerText = `今日酪梨市場價格（民國 ${TODAY_STR}）`;
     cachedRawData = [];
 
-    // 依序向各市場發出今日資料請求
     for (let i = 0; i < MARKET_MAP.length; i++) {
         const target = MARKET_MAP[i];
         
-        // 嚴格傳入 TODAY_STR，不進行任何前一日的遞補
         let data = await fetchFarmData(CROP_CODE, target.code, TODAY_STR);
 
+        // 檢查是否有抓到資料
         if (data && data.length > 0) {
+            let hasValidData = false;
+
             data.forEach(item => {
-                item.originalIndex = i; 
-                item['市場名稱'] = target.name; // 校正名稱確保與 COLUMNS 的 '市場名稱' 字串百分之百相符
-                cachedRawData.push(item);
+                // 💡 關鍵修正：將字串轉為數字，判定是否為無效交易（都是 0 的資料）
+                const avgPrice = Number(item['平均價']) || 0;
+                const volume = Number(item['交易量']) || 0;
+
+                // 只有當平均價或交易量大於 0 時，才視為有效資料
+                if (avgPrice > 0 || volume > 0) {
+                    item.originalIndex = i; 
+                    item['市場名稱'] = target.name; 
+                    cachedRawData.push(item);
+                    hasValidData = true;
+                }
             });
+
+            // 如果該市場回傳的全部都是 0 的無效交易，則手動塞入休市提示
+            if (!hasValidData) {
+                cachedRawData.push({ '市場名稱': target.name, 'isRest': true, 'originalIndex': i });
+            }
+
         } else {
-            // 如果 API 回傳空陣列，代表該市場今日休市、尚未開市或尚無資料
+            // API 回傳空陣列（如台中市、豐原區今日尚無資料或休市）
             cachedRawData.push({ '市場名稱': target.name, 'isRest': true, 'originalIndex': i });
         }
     }
